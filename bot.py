@@ -33,35 +33,19 @@ TOKEN = os.getenv("BOT_TOKEN")
 ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# پیکربندی جمینای
+# پیکربندی جمینای با مدل‌های رسمی و کاملاً پایدار
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-def get_active_model():
-    """یافتن خودکار فعال‌ترین و جدیدترین مدل موجود برای اکانت شما"""
-    candidate_models = [
-        'gemini-1.5-pro',
-        'gemini-1.5-flash-002',
-        'gemini-1.5-pro-002',
-        'gemini-2.0-flash-exp',
-        'gemini-1.5-flash-8b'
-    ]
-    if not GEMINI_API_KEY:
-        return None
-    
-    try:
-        # دریافت مستقیم لیست مدل‌های مجاز از گوگل
-        available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for candidate in candidate_models:
-            for avail in available:
-                if candidate in avail:
-                    return genai.GenerativeModel(avail)
-        if available:
-            return genai.GenerativeModel(available[0])
-    except Exception as e:
-        logger.error(f"Error listing models: {e}")
-    
-    return genai.GenerativeModel('gemini-1.5-pro')
+def get_working_model():
+    # لیست مدلهای مطمئن و اصلی به ترتیب اولویت
+    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    for m in models_to_try:
+        try:
+            return genai.GenerativeModel(m)
+        except Exception:
+            continue
+    return genai.GenerativeModel('gemini-1.5-flash')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -89,7 +73,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if GEMINI_API_KEY:
         try:
-            model = get_active_model()
+            model = get_working_model()
             response = model.generate_content(text)
             await update.message.reply_text(response.text)
         except Exception as e:
@@ -112,8 +96,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             from PIL import Image
             img = Image.open(file_path)
-            model = get_active_model()
-            response = model.generate_content(["این تصویر/چارت را کامل، دقیق و هوشمندانه تحلیل کن:", img])
+            model = get_working_model()
+            response = model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
             await update.message.reply_text(response.text)
         except Exception as e:
             await update.message.reply_text(f"خطا در پردازش تصویر: {e}")
