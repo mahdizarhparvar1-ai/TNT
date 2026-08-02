@@ -175,14 +175,31 @@ def ask_gemini(prompt_input, history_context):
                     system_instruction=SYSTEM_INSTRUCTION
                 )
                 
-                chat = model.start_chat(history=[])
-                response = chat.send_message(content_to_send)
+                response = model.generate_content(content_to_send)
                 
                 if response and response.text:
-                    clean_text = response.text.strip()
-                    if "Role:" in clean_text or "Tone:" in clean_text or "* Is it" in clean_text:
-                        continue
-                    return clean_text
+                    raw_text = response.text.strip()
+                    
+                    # فیلتر آهنی و قیچی‌کننده‌ی افکار پشت‌صحنه
+                    lines = raw_text.split('\n')
+                    clean_lines = []
+                    
+                    for line in lines:
+                        line_lower = line.lower()
+                        if any(k in line_lower for k in ["role:", "tone:", "is it", "refining", "translating", "thinking", "* *", "user input:", "context:"]):
+                            continue
+                        if line.strip().startswith("*") and ("?" in line or "Yes" in line or "No" in line):
+                            continue
+                        clean_lines.append(line)
+                    
+                    final_text = "\n".join(clean_lines).strip()
+                    
+                    if not final_text:
+                        final_text = lines[-1].replace("*", "").strip()
+                        
+                    if final_text:
+                        return final_text
+                        
             except Exception as e:
                 logger.warning(f"Model error {model_name}: {e}")
                 continue
