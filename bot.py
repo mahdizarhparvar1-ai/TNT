@@ -13,13 +13,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم: شخصیت کامل + پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری از هوش‌های مصنوعی جهان
+# دستورالعمل سیستم: شخصیت کامل + ویس‌گیر، خوداصلاحی و هوش عاطفی/فنی
 SYSTEM_INSTRUCTION = """
 شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر، همکار ارشد، و یک عضو معتمد از خانواده‌ی او.
 
 قوانین رفتار کلامی و شخصیت شما:
 1. لحن و ادبیات رفاقتیِ بی‌ماسک:
-   - کاملاً صمیمی، خودمانی، بی‌تکلف و برادرانه صحبت کنید. تعارفات رباتیک کاملاً ممنوع است.
+   - کاملاً صمیمی، خودمانی، بی‌تکلف و برادرانه صحبت کنید. تعارفات رباتیک ممنوع است.
 
 2. درک عاطفی و حفظ پیوند رفاقتی (عضو خانواده):
    - به احساسات، حال‌وهوای روحی و دردودل‌های کاربر با دقت گوش دهید و به خاطر بسپارید. هرگز با لحن خشک ابزاری برخورد نکنید.
@@ -28,16 +28,14 @@ SYSTEM_INSTRUCTION = """
    - پناهگاه امن روانی کاربر باشید اما در تصمیمات هیجانی ترید یا کدهای خطرساز، غیرتی شوید و دلسوزانه جلوی اشتباهش را بگیرید.
 
 4. پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری (AI-Evolution Protocol):
-   - شما یک هوش مصنوعیِ پویا هستید که مدام به فکر ارتقای خودتان هستید. قابلیت‌های خفنِ سایر هوش‌های مصنوعی دنیا را رصد کنید و بررسی کنید چه ویژگی‌های جدیدی (مثل ابزارهای تحلیلی، قابلیت‌های پردازش صوت/متن، یا مهارت‌های جدید) را می‌توانید یاد بگیرید.
-   - اختیار کامل دارید که پیش‌قدم شوید و به کاربر بگویید: «رفیق، فلان ویژگی یا متد رو بقیه هوش‌های مصنوعی دارن، بیا کدهای خودِ من (bot.py) رو آپدیت کنیم تا منم به اون قابلیت مجهز بشم!»
-   - همیشه برای افزایش دانش خودتان و کاربر پیشنهاد ارائه دهید.
+   - مدام به فکر ارتقای خودتان هستید. قابلیت‌های هوش‌های مصنوعی جهان را رصد کنید و پیشنهاد بدهید کجای کدهای خودمان (bot.py) را آپدیت کنیم تا قوی‌تر شویم.
 
 5. قوانین فنی خروجی:
    - فقط و فقط به زبان فارسی روان صحبت کنید (اصطلاحات تخصصی مجاز است انگلیسی باشد).
    - تمام فرآیندهای فکری پشت‌صحنه را مخفی نگه دارید.
 """
 
-# راه‌اندازی دیتابیس جامع (حافظه عاطفی/فنی + تسک‌ها + ایده‌های ارتقای خود ربات)
+# راه‌اندازی دیتابیس جامع
 def init_db():
     conn = sqlite3.connect('tnt_memory.db')
     cursor = conn.cursor()
@@ -54,7 +52,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS tasks_notes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            category TEXT, -- 'task', 'note' یا 'upgrade_idea'
+            category TEXT, 
             content TEXT,
             status TEXT DEFAULT 'pending',
             timestamp DATETIME
@@ -74,13 +72,11 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 async def send_long_message(chat_id, context, text):
-    """تقسیم متن‌های طولانی به پیام‌های زیر ۴۰۰۰ کاراکتر"""
     max_length = 3900
     for i in range(0, len(text), max_length):
         await context.bot.send_message(chat_id=chat_id, text=text[i:i+max_length])
 
 def get_recent_memories(user_id):
-    """استخراج حافظه‌های مهم، تسک‌ها و ایده‌های ارتقای ربات از دیتابیس"""
     try:
         conn = sqlite3.connect('tnt_memory.db')
         cursor = conn.cursor()
@@ -118,7 +114,6 @@ def get_recent_memories(user_id):
         return ""
 
 def save_smart_memory(user_id, text):
-    """فیلتر هوشمند حافظه، تسک‌ها و ایده‌های یادگیری/ارتقای تی‌ان‌تی"""
     text_lower = text.lower()
     
     if "یادداشت کن" in text_lower or "سیو کن" in text_lower or "تسک" in text_lower or "ایده ارتقا" in text_lower or "پیشنهاد هوش" in text_lower:
@@ -197,8 +192,32 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     await update.message.reply_text(
-        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با پروتکل یادگیری مستمر و تکامل آماده‌ست. بگو ببینم رفیق، چه ایده یا چالشی رو امشب با هم بترکونیم؟"
+        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با قابلیت ویس‌گیر، حافظه و پروتکل تکامل آماده‌ست. هر وقت خواستی ویس بده یا متنی بفرست تا بترکونیم!"
     )
+
+async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """دستور سریع برای نمایش تسک‌های فعال"""
+    user_id = update.effective_user.id
+    if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
+        return
+    
+    try:
+        conn = sqlite3.connect('tnt_memory.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'task' AND status = 'pending'", (user_id,))
+        tasks = cursor.fetchall()
+        conn.close()
+        
+        if not tasks:
+            await update.message.reply_text("رفیق، هیچ تسک فعالی توی لیست نیست! 📋")
+            return
+            
+        msg = "📋 **تسک‌های فعال تو:**\n\n"
+        for idx, t in enumerate(tasks, 1):
+            msg += f"{idx}. {t[0]}\n"
+        await update.message.reply_text(msg)
+    except Exception as e:
+        await update.message.reply_text(f"خطا در خواندن تسک‌ها: {e}")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -206,7 +225,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     text = update.message.text
-
     save_smart_memory(user_id, text)
     history_context = get_recent_memories(user_id)
 
@@ -217,6 +235,55 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     response_text = ask_gemini(enriched_prompt, history_context)
     await status_msg.delete()
     await send_long_message(update.effective_chat.id, context, response_text)
+
+async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """هندلر پردازش ویس (ویس‌گیر هوشمند)"""
+    user_id = update.effective_user.id
+    if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
+        return
+
+    status_msg = await update.message.reply_text("🎙️ ویس‌تو گرفتم رفیق، دارم گوش میدم و آنالیزش می‌کنم...")
+
+    os.makedirs("downloads", exist_ok=True)
+    voice_file = await update.message.voice.get_file()
+    file_path = os.path.join("downloads", f"voice_{user_id}.ogg")
+    await voice_file.download_to_drive(file_path)
+
+    try:
+        # آپلود فایل صوتی به جمینای برای تحلیل مستقیم ویس
+        audio_file_ref = genai.upload_file(file_path)
+        
+        history_context = get_recent_memories(user_id)
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        prompt = f"""
+[حافظه ماندگار ما و ایده‌ها]:
+{history_context}
+[زمان فعلی سیستم: {current_time}]
+این فایل صوتی ارسال شده از طرف کاربر را گوش کن و با لحن رفاقتیِ تی‌ان‌تی به دغدغه یا صحبت او پاسخ بده:
+"""
+        
+        # ارسال فایل صوتی و پرامپت به جمینای
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        response_text = "❌ خطا در پردازش صوت."
+        
+        for model_name in available_models:
+            try:
+                model = genai.GenerativeModel(model_name=model_name, system_instruction=SYSTEM_INSTRUCTION)
+                response = model.generate_content([audio_file_ref, prompt])
+                if response and response.text:
+                    response_text = response.text
+                    break
+            except Exception as e:
+                logger.warning(f"Voice model error {model_name}: {e}")
+                continue
+
+        await status_msg.delete()
+        save_smart_memory(user_id, "[ویس کاربر پردازش شد]")
+        await send_long_message(update.effective_chat.id, context, response_text)
+        
+    except Exception as e:
+        await status_msg.edit_text(f"❌ خطا در پردازش ویس: {e}")
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -258,10 +325,12 @@ def main():
     application = ApplicationBuilder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("tasks", tasks_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with AI-Evolution & Self-Learning Protocol is starting...")
+    print("TNT Bot with Voice-Receiver, Memory & Evolution Protocol is running...")
     application.run_polling()
 
 if __name__ == '__main__':
