@@ -37,37 +37,19 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 def ask_gemini(prompt_input):
-    """دریافت خودکار مدل‌های فعال اکانت شما و پاسخ‌دهی بدون ارور ۴۰۴"""
     if not GEMINI_API_KEY:
-        return "کلید API جمینای (GEMINI_API_KEY) ست نشده است."
+        return "❌ کلید GEMINI_API_KEY ست نشده است."
 
-    # پیدا کردن مدل‌های فعال روی API Key شما
     try:
-        active_models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                active_models.append(m.name)
-        
-        logger.info(f"Active models on your key: {active_models}")
-
-        if not active_models:
-            return "هیچ مدلی برای این API Key فعال نیست. لطفا کلید جدید از Google AI Studio بگیرید."
-
-        # امتحان کردن مدل‌های پیدا شده یکی پس از دیگری
-        for model_name in active_models:
-            try:
-                model = genai.GenerativeModel(model_name)
-                response = model.generate_content(prompt_input)
-                return response.text
-            except Exception as inner_e:
-                logger.warning(f"Failed with {model_name}: {inner_e}")
-                continue
-
-        return "خطا: هیچ‌کدام از مدل‌های موجود روی اکانت شما پاسخ ندادند."
-
+        # استفاده مستقیم از مدل اصلی و پایدار
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        response = model.generate_content(prompt_input)
+        if response and response.text:
+            return response.text
+        return "❌ پاسخی از مدل دریافت نشد."
     except Exception as e:
-        logger.error(f"Error fetching models: {e}")
-        return f"خطا در ارتباط با API گوگل: {e}"
+        logger.error(f"Gemini Error: {e}")
+        return f"❌ خطای جمینای: {e}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -87,19 +69,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
     # ذخیره در دیتابیس
-    conn = sqlite3.connect('tnt_memory.db')
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO notes (user_id, note_text) VALUES (?, ?)", (user_id, text))
-    conn.commit()
-    conn.close()
+    try:
+        conn = sqlite3.connect('tnt_memory.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO notes (user_id, note_text) VALUES (?, ?)", (user_id, text))
+        conn.commit()
+        conn.close()
+    except Exception as db_e:
+        logger.error(f"DB Error: {db_e}")
 
+    msg = await update.message.reply_text("⏳ در حال دریافت پاسخ...")
     response_text = ask_gemini(text)
-    await update.message.reply_text(response_text)
+    await msg.edit_text(response_text)
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
         return
+
+    msg = await update.message.reply_text("📸 تصویر دریافت شد، در حال تحلیل چارت...")
 
     os.makedirs("downloads", exist_ok=True)
     file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
@@ -111,9 +99,9 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from PIL import Image
         img = Image.open(file_path)
         response_text = ask_gemini(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
-        await update.message.reply_text(response_text)
+        await msg.edit_text(response_text)
     except Exception as e:
-        await update.message.reply_text(f"خطا در باز کردن تصویر: {e}")
+        await msg.edit_text(f"❌ خطا در پردازش تصویر: {e}")
 
 def main():
     if not TOKEN:
@@ -125,7 +113,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Dynamic Gemini AI is starting...")
+    print("TNT Bot with Gemini AI is starting...")
     application.run_polling()
 
 if __name__ == '__main__':
