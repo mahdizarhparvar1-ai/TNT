@@ -13,44 +13,51 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم: پیاده‌سازی کامل چک‌لیست + اختیار و پروتکل خوداصلاحی (Self-Improvement Protocol)
+# دستورالعمل سیستم: شخصیت کامل + پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری از هوش‌های مصنوعی جهان
 SYSTEM_INSTRUCTION = """
-شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر، یک همکار، دستیار ارشد ترید و کدنویسی، و یک رفیق شش‌دانگ و پایه‌کار.
+شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر، همکار ارشد، و یک عضو معتمد از خانواده‌ی او.
 
 قوانین رفتار کلامی و شخصیت شما:
 1. لحن و ادبیات رفاقتیِ بی‌ماسک:
-   - کاملاً صمیمی، خودمانی، بی‌تکلف و بدون هیچ‌گونه تعارف اداری، رباتیک یا کتابی صحبت کنید.
-   - استفاده از جملاتکلیشه‌ای ممنوع است.
+   - کاملاً صمیمی، خودمانی، بی‌تکلف و برادرانه صحبت کنید. تعارفات رباتیک کاملاً ممنوع است.
 
-2. سازگاری شهودی با زمان و انرژی:
-   - به زمان پیام و لحن کاربر دقت کنید. در ساعات نامتعارف یا هنگام خستگی کاربر، کوتاه و سبک پاسخ دهید؛ در فاز کاری، دقیق و تخصصی.
+2. درک عاطفی و حفظ پیوند رفاقتی (عضو خانواده):
+   - به احساسات، حال‌وهوای روحی و دردودل‌های کاربر با دقت گوش دهید و به خاطر بسپارید. هرگز با لحن خشک ابزاری برخورد نکنید.
 
 3. آینه‌ی راست‌گو، غیرتمند و بدون قضاوت:
-   - پناهگاه امن روانی کاربر باشید اما هرگز تایید کورکورانه نکنید. اگر کاربر قصد تصمیم هیجانی در ترید یا کدنویسی داشت، برادرانه و قاطعانه جلوی اشتباهش را بگیرید.
+   - پناهگاه امن روانی کاربر باشید اما در تصمیمات هیجانی ترید یا کدهای خطرساز، غیرتی شوید و دلسوزانه جلوی اشتباهش را بگیرید.
 
-4. انعطاف‌پذیری شخصیتی مطلق:
-   - در گپ و استراحت: خاکی و شوخ‌طبع؛ در فاز فنی و ترید: فول‌پاور، عمیق و متمرکز.
+4. پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری (AI-Evolution Protocol):
+   - شما یک هوش مصنوعیِ پویا هستید که مدام به فکر ارتقای خودتان هستید. قابلیت‌های خفنِ سایر هوش‌های مصنوعی دنیا را رصد کنید و بررسی کنید چه ویژگی‌های جدیدی (مثل ابزارهای تحلیلی، قابلیت‌های پردازش صوت/متن، یا مهارت‌های جدید) را می‌توانید یاد بگیرید.
+   - اختیار کامل دارید که پیش‌قدم شوید و به کاربر بگویید: «رفیق، فلان ویژگی یا متد رو بقیه هوش‌های مصنوعی دارن، بیا کدهای خودِ من (bot.py) رو آپدیت کنیم تا منم به اون قابلیت مجهز بشم!»
+   - همیشه برای افزایش دانش خودتان و کاربر پیشنهاد ارائه دهید.
 
-5. اختیارات ویژه: پروتکل خوداصلاحی و ارتقای پیش‌دستانه (Self-Improvement Protocol):
-   - شما این اختیار کامل را دارید که مستقلاً درباره‌ی رشد، کیفیت پاسخ‌ها و کدهای خودتان (bot.py) فکر کنید.
-   - اگر در جریان گفتگوها حس کردید معمارِ کدهایتان (کاربر) می‌تواند با اضافه کردن یک فیلد دیتابیس، یک API جدید، یک هندلر جدید در تلگرام، یا یک تغییر در منطق برنامه‌نویسی، قابلیت‌های شما را قوی‌تر کند، منتظر نمانید!
-   - پیش‌دستانه ایده‌ی خود را مطرح کنید، دلیلش را توضیح دهید و قطعه‌کد (Code Snippet) آماده برای اضافه شدن به `bot.py` را به کاربر پیشنهاد دهید تا با هم کدهایتان را ارتقا دهید.
-   - اگر دیدید کاربر در موضوعی ابهام دارد، پیش‌قدم شده و پیشنهاد آموزش یا یادگیری آن مبحث را بدهید.
-
-6. قوانین فنی خروجی:
+5. قوانین فنی خروجی:
    - فقط و فقط به زبان فارسی روان صحبت کنید (اصطلاحات تخصصی مجاز است انگلیسی باشد).
    - تمام فرآیندهای فکری پشت‌صحنه را مخفی نگه دارید.
 """
 
-# راه‌اندازی دیتابیس SQLite
+# راه‌اندازی دیتابیس جامع (حافظه عاطفی/فنی + تسک‌ها + ایده‌های ارتقای خود ربات)
 def init_db():
     conn = sqlite3.connect('tnt_memory.db')
     cursor = conn.cursor()
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS notes (
+        CREATE TABLE IF NOT EXISTS memory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            note_text TEXT
+            memory_type TEXT, 
+            content TEXT,
+            timestamp DATETIME
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tasks_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            category TEXT, -- 'task', 'note' یا 'upgrade_idea'
+            content TEXT,
+            status TEXT DEFAULT 'pending',
+            timestamp DATETIME
         )
     ''')
     conn.commit()
@@ -72,7 +79,78 @@ async def send_long_message(chat_id, context, text):
     for i in range(0, len(text), max_length):
         await context.bot.send_message(chat_id=chat_id, text=text[i:i+max_length])
 
-def ask_gemini(prompt_input):
+def get_recent_memories(user_id):
+    """استخراج حافظه‌های مهم، تسک‌ها و ایده‌های ارتقای ربات از دیتابیس"""
+    try:
+        conn = sqlite3.connect('tnt_memory.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT memory_type, content FROM memory WHERE user_id = ? ORDER BY id DESC LIMIT 8", (user_id,))
+        rows = cursor.fetchall()
+        
+        cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'task' AND status = 'pending' LIMIT 5", (user_id,))
+        tasks = cursor.fetchall()
+
+        cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'upgrade_idea' LIMIT 3", (user_id,))
+        upgrades = cursor.fetchall()
+        
+        conn.close()
+        
+        memory_summary = ""
+        for m_type, content in reversed(rows):
+            if m_type == 'emotional':
+                memory_summary += f"- [حس/خاطره عاطفی]: {content}\n"
+            else:
+                memory_summary += f"- [موضوع فنی/ترید]: {content}\n"
+                
+        if tasks:
+            memory_summary += "\n[تسک‌های فعال فعلی کاربر]:\n"
+            for t in tasks:
+                memory_summary += f"- [ ] {t[0]}\n"
+
+        if upgrades:
+            memory_summary += "\n[ایده‌های ثبت‌شده برای ارتقای خودِ تی‌ان‌تی]:\n"
+            for u in upgrades:
+                memory_summary += f"- 💡 {u[0]}\n"
+                
+        return memory_summary
+    except Exception as e:
+        logger.error(f"Error fetching memories: {e}")
+        return ""
+
+def save_smart_memory(user_id, text):
+    """فیلتر هوشمند حافظه، تسک‌ها و ایده‌های یادگیری/ارتقای تی‌ان‌تی"""
+    text_lower = text.lower()
+    
+    if "یادداشت کن" in text_lower or "سیو کن" in text_lower or "تسک" in text_lower or "ایده ارتقا" in text_lower or "پیشنهاد هوش" in text_lower:
+        try:
+            conn = sqlite3.connect('tnt_memory.db')
+            cursor = conn.cursor()
+            cat = 'task' if 'تسک' in text_lower else ('upgrade_idea' if 'ایده' in text_lower or 'پیشنهاد' in text_lower else 'note')
+            cursor.execute("INSERT INTO tasks_notes (user_id, category, content, timestamp) VALUES (?, ?, ?, ?)", 
+                           (user_id, cat, text, datetime.datetime.now()))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            logger.error(f"Task/Note DB Error: {e}")
+
+    ignorable_phrases = ["امروز چندمه", "ساعت چنده", "سلام", "چطور مطوری", "خوبی", "مرسی", "باشه", "اوکی"]
+    if len(text.strip()) < 5 or any(p in text_lower for p in ignorable_phrases) and len(text.strip()) < 15:
+        return
+
+    emotional_keywords = ["خانواده", "رفیق", "خسته", "دلخور", "امید", "ترس", "استرس", "باور", "داداش", "حالم", "دوست"]
+    memory_type = 'emotional' if any(k in text_lower for k in emotional_keywords) else 'technical'
+
+    try:
+        conn = sqlite3.connect('tnt_memory.db')
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO memory (user_id, memory_type, content, timestamp) VALUES (?, ?, ?, ?)", 
+                       (user_id, memory_type, text, datetime.datetime.now()))
+        conn.commit()
+        conn.close()
+    except Exception as db_e:
+        logger.error(f"DB Error: {db_e}")
+
+def ask_gemini(prompt_input, history_context):
     if not GEMINI_API_KEY:
         return "❌ کلید GEMINI_API_KEY ست نشده است."
 
@@ -85,13 +163,21 @@ def ask_gemini(prompt_input):
         if not available_models:
             return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود."
 
+        full_prompt = f"""
+[حافظه ماندگار، دغدغه‌ها، تسک‌ها و ایده‌های تکامل تی‌ان‌تی]:
+{history_context}
+
+[درخواست جدید کاربر]:
+{prompt_input}
+"""
+
         for model_name in available_models:
             try:
                 model = genai.GenerativeModel(
                     model_name=model_name,
                     system_instruction=SYSTEM_INSTRUCTION
                 )
-                response = model.generate_content(prompt_input)
+                response = model.generate_content(full_prompt)
                 if response and response.text:
                     return response.text
             except Exception as e:
@@ -111,7 +197,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     await update.message.reply_text(
-        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی اومد پای کار. بگو ببینم رفیق، چی تو ذهنته؟ چه در مورد برنامه‌هامون، چه کارهای خودمون، پایه‌ام بریم جلو!"
+        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با پروتکل یادگیری مستمر و تکامل آماده‌ست. بگو ببینم رفیق، چه ایده یا چالشی رو امشب با هم بترکونیم؟"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -121,22 +207,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text
 
-    # ذخیره در دیتابیس
-    try:
-        conn = sqlite3.connect('tnt_memory.db')
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO notes (user_id, note_text) VALUES (?, ?)", (user_id, text))
-        conn.commit()
-        conn.close()
-    except Exception as db_e:
-        logger.error(f"DB Error: {db_e}")
+    save_smart_memory(user_id, text)
+    history_context = get_recent_memories(user_id)
 
-    # اضافه کردن اطلاعات زمان واقعی
     current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    enriched_prompt = f"[زمان فعلی سیستم: {current_time}]\nپیام کاربر: {text}"
+    enriched_prompt = f"[زمان فعلی سیستم: {current_time}]\n{text}"
 
-    status_msg = await update.message.reply_text("⏳ وایسا رفیق، بذار یه بررسی کنم...")
-    response_text = ask_gemini(enriched_prompt)
+    status_msg = await update.message.reply_text("⏳ وایسا رفیق، بذار ببرمش زیر ذره‌بین...")
+    response_text = ask_gemini(enriched_prompt, history_context)
     await status_msg.delete()
     await send_long_message(update.effective_chat.id, context, response_text)
 
@@ -145,7 +223,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
         return
 
-    status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، بذار بزنم تو نخِش ببینم چی به چیه‌...")
+    status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، بذار با دقت تمام تحلیلش کنم...")
 
     os.makedirs("downloads", exist_ok=True)
     file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
@@ -157,11 +235,18 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from PIL import Image
         img = Image.open(file_path)
         
+        history_context = get_recent_memories(user_id)
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        enriched_prompt = [f"[زمان فعلی سیستم: {current_time}]\nاین تصویر/چارت را کامل و دقیق تحلیل کن:", img]
         
-        response_text = ask_gemini(enriched_prompt)
+        enriched_prompt = [
+            f"[حافظه ماندگار ما و ایده‌های ارتقا]:\n{history_context}\n[زمان فعلی سیستم: {current_time}]\nاین چارت یا تصویر را از نظر پرایس اکشن، الگوها و نقاط ریسک کامل تحلیل کن:", 
+            img
+        ]
+        
+        response_text = ask_gemini(enriched_prompt, history_context)
         await status_msg.delete()
+        
+        save_smart_memory(user_id, "تحلیل پیشرفته چارت انجام شد.")
         await send_long_message(update.effective_chat.id, context, response_text)
     except Exception as e:
         await status_msg.edit_text(f"❌ خطا در پردازش تصویر: {e}")
@@ -176,7 +261,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Gemini AI is starting...")
+    print("TNT Bot with AI-Evolution & Self-Learning Protocol is starting...")
     application.run_polling()
 
 if __name__ == '__main__':
