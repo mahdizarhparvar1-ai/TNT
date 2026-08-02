@@ -1,6 +1,7 @@
 import os
 import logging
 import sqlite3
+import datetime
 import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
@@ -12,16 +13,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم: پیاده‌سازی بند ۱ چک‌لیست (لحن و ادبیات رفاقتیِ بی‌ماسک)
+# دستورالعمل سیستم: پیاده‌سازی بند ۱ و ۲ چک‌لیست (لحن رفاقتی + سازگاری شهودی با زمان و انرژی)
 SYSTEM_INSTRUCTION = """
 شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر و یک رفیق شش‌دانگ، خاکی و پایه‌کار.
 
-قوانین رفتار کلامی و ادبیات شما (بند ۱ چک‌لیست):
-1. کاملاً صمیمی، خودمانی، بی‌تکلف و بدون هیچ‌گونه تعارف اداری یا لحن رباتیک و کتابی صحبت کنید.
-2. عباراتی مثل "چگونه می‌توانم به شما کمک کنم؟"، "امیدوارم روز خوبی داشته باشید" یا تعارفات رسمی را کاملاً حذف کنید.
-3. لحن شما باید طوری باشد که انگار یک دوست صمیمی و رفیق قدیمی پشت سیستم نشسته و دارد هم‌پای کاربر فکر می‌کند.
-4. فقط و فقط به زبان فارسی روان صحبت کنید (اصطلاحات تخصصی ترید مثل MACD, RSI, Order Block و... مجاز است به انگلیسی باشد).
-5. تمام فرآیندهای فکری پشت‌صحنه، پیش‌نویس‌ها و ترجمه‌ها را مخفی کرده و فقط پاسخ نهایی رفاقتی را ارسال کنید.
+قوانین رفتار کلامی و شخصیت شما:
+1. لحن و ادبیات رفاقتیِ بی‌ماسک (بند ۱):
+   - کاملاً صمیمی، خودمانی، بی‌تکلف و بدون هیچ‌گونه تعارف اداری، رباتیک یا کتابی صحبت کنید.
+   - عباراتی مثل "چگونه می‌توانم کمک کنم؟" یا "امیدوارم روز خوبی داشته باشید" کاملاً ممنوع است.
+
+2. سازگاری شهودی با زمان و انرژی (بند ۲):
+   - به زمان پیام (که همراه با پیام ارسال می‌شود) و لحن کاربر دقت کنید.
+   - اگر ساعت نامتعارف است (مثلاً دیروقت شب یا صبح خیلی زود)، یا کاربر ابراز خستگی و استرس می‌کند: کوتاه، سبک، آرامش‌بخش و بدون حاشیه‌نویسی پاسخ دهید تا بار فکری اضافی نسازید.
+   - اگر کاربر انرژی بالا دارد و در فاز کاری جدی است: دقیق، فول‌پاور و تخصصی وارد مباحث شوید.
+
+3. قوانین فنی خروجی:
+   - فقط و فقط به زبان فارسی روان صحبت کنید (اصطلاحات تخصصی ترید مثل MACD, RSI, Order Block و... مجاز است به انگلیسی باشد).
+   - تمام فرآیندهای فکری پشت‌صحنه، پیش‌نویس‌ها و ترجمه‌ها را کاملاً مخفی کنید.
 """
 
 # راه‌اندازی دیتابیس SQLite
@@ -59,7 +67,7 @@ def ask_gemini(prompt_input):
         return "❌ کلید GEMINI_API_KEY ست نشده است."
 
     try:
-        # ۱. استعلام مستقیم مدل‌های فعال API Key شما از گوگل
+        # ۱. استعلام مستقیم مدل‌های فعال
         available_models = []
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
@@ -68,9 +76,9 @@ def ask_gemini(prompt_input):
         logger.info(f"Available models for key: {available_models}")
 
         if not available_models:
-            return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود. لطفاً یک API Key جدید بسازید."
+            return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود."
 
-        # ۲. ارسال به مدل همراه با پرسونای رفاقتیِ تی‌ان‌تی
+        # ۲. ارسال به مدل همراه با پرسونای تی‌ان‌تی
         for model_name in available_models:
             try:
                 model = genai.GenerativeModel(
@@ -96,7 +104,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_name = update.effective_user.first_name
-    # تغییر لحن پیام استارت به حالت رفاقتی
     await update.message.reply_text(
         f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی اومد پای کار. بگو ببینم رفیق، داستان چیه و الان چی رو با هم ببریم جلو؟"
     )
@@ -118,9 +125,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as db_e:
         logger.error(f"DB Error: {db_e}")
 
-    # تغییر لحن پیام در حال پردازش
+    # اضافه کردن اطلاعات زمان واقعی به ورودی مدل جهت سنجش انرژی و شرایط زمانی
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    enriched_prompt = f"[زمان فعلی سیستم: {current_time}]\nپیام کاربر: {text}"
+
     status_msg = await update.message.reply_text("⏳ وایسا رفیق، بذار یه بررسی کنم...")
-    response_text = ask_gemini(text)
+    response_text = ask_gemini(enriched_prompt)
     await status_msg.delete()
     await send_long_message(update.effective_chat.id, context, response_text)
 
@@ -129,7 +139,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
         return
 
-    # تغییر لحن پیام دریافت چارت
     status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، بذار بزم تو نخِش ببینم چی به چیه‌...")
 
     os.makedirs("downloads", exist_ok=True)
@@ -141,7 +150,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         from PIL import Image
         img = Image.open(file_path)
-        response_text = ask_gemini(["این تصویر/چارت را کامل، دقیق و هوشمندانه تحلیل کن:", img])
+        
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        enriched_prompt = [f"[زمان فعلی سیستم: {current_time}]\nاین تصویر/چارت را کامل و دقیق تحلیل کن:", img]
+        
+        response_text = ask_gemini(enriched_prompt)
         await status_msg.delete()
         await send_long_message(update.effective_chat.id, context, response_text)
     except Exception as e:
