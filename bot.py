@@ -36,10 +36,32 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # پیکربندی جمینای
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # استفاده از عبارت رسمی و استاندارد همراه با پیشوند models/
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
-else:
-    model = None
+
+def get_active_model():
+    """یافتن خودکار فعال‌ترین و جدیدترین مدل موجود برای اکانت شما"""
+    candidate_models = [
+        'gemini-1.5-pro',
+        'gemini-1.5-flash-002',
+        'gemini-1.5-pro-002',
+        'gemini-2.0-flash-exp',
+        'gemini-1.5-flash-8b'
+    ]
+    if not GEMINI_API_KEY:
+        return None
+    
+    try:
+        # دریافت مستقیم لیست مدل‌های مجاز از گوگل
+        available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        for candidate in candidate_models:
+            for avail in available:
+                if candidate in avail:
+                    return genai.GenerativeModel(avail)
+        if available:
+            return genai.GenerativeModel(available[0])
+    except Exception as e:
+        logger.error(f"Error listing models: {e}")
+    
+    return genai.GenerativeModel('gemini-1.5-pro')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -65,18 +87,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
 
-    # ارسال به جمینای و دریافت پاسخ
-    if model:
+    if GEMINI_API_KEY:
         try:
+            model = get_active_model()
             response = model.generate_content(text)
             await update.message.reply_text(response.text)
         except Exception as e:
-            try:
-                alt_model = genai.GenerativeModel('gemini-2.5-flash')
-                response = alt_model.generate_content(text)
-                await update.message.reply_text(response.text)
-            except Exception as e2:
-                await update.message.reply_text(f"خطا در ارتباط با هوش مصنوعی: {e2}")
+            await update.message.reply_text(f"خطا در ارتباط با هوش مصنوعی: {e}")
     else:
         await update.message.reply_text("کلید API جمینای (GEMINI_API_KEY) در متغیرهای محیطی تنظیم نشده است.")
 
@@ -91,22 +108,15 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_file = await update.message.photo[-1].get_file()
     await photo_file.download_to_drive(file_path)
 
-    if model:
+    if GEMINI_API_KEY:
         try:
             from PIL import Image
             img = Image.open(file_path)
-            response = model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
+            model = get_active_model()
+            response = model.generate_content(["این تصویر/چارت را کامل، دقیق و هوشمندانه تحلیل کن:", img])
             await update.message.reply_text(response.text)
         except Exception as e:
-            # پشتیبان خودکار در صورت نپذیرفتن مدل اول
-            try:
-                from PIL import Image
-                img = Image.open(file_path)
-                fallback_model = genai.GenerativeModel('gemini-2.5-flash')
-                response = fallback_model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
-                await update.message.reply_text(response.text)
-            except Exception as e2:
-                await update.message.reply_text(f"خطا در پردازش تصویر: {e2}")
+            await update.message.reply_text(f"خطا در پردازش تصویر: {e}")
     else:
         await update.message.reply_text("تصویر ذخیره شد اما کلید جمینای ست نشده است.")
 
