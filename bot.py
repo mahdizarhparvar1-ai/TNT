@@ -12,14 +12,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم جهت فارسی‌سازی کامل و حذف روندهای فکری پشت‌صحنه
+# دستورالعمل سیستم: پیاده‌سازی بند ۱ چک‌لیست (لحن و ادبیات رفاقتیِ بی‌ماسک)
 SYSTEM_INSTRUCTION = """
-شما دستیار هوشمند، حرفه‌ای و اختصاصی تحلیل چارت و ترید به نام «تی‌ان‌تی» هستید.
-قوانین بسیار مهم که رعایت آن‌ها الزامی است:
-1. زبان ارتباطی شما فقط و فقط فارسی روان، صمیمی و محترمانه است.
-2. تمام روند فکر کردن، تحلیل‌های پشت صحنه (Thinking process)، گزینه‌ها، پیش‌نویس‌ها و ترجمه‌های انگلیسی را کاملاً مخفی کنید و هرگز در خروجی چاپ نکنید.
-3. اصطلاحات تخصصی مالی، ترید و تحلیل تکنیکال (مانند MACD, RSI, Order Block, Stop Loss, Take Profit و...) را مجاز هستید به زبان انگلیسی بنویسید.
-4. خروجی باید کاملاً تمیز، مستقیم و بدون هیچ مقدمه یا متن اضافه انگلیسی باشد.
+شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر و یک رفیق شش‌دانگ، خاکی و پایه‌کار.
+
+قوانین رفتار کلامی و ادبیات شما (بند ۱ چک‌لیست):
+1. کاملاً صمیمی، خودمانی، بی‌تکلف و بدون هیچ‌گونه تعارف اداری یا لحن رباتیک و کتابی صحبت کنید.
+2. عباراتی مثل "چگونه می‌توانم به شما کمک کنم؟"، "امیدوارم روز خوبی داشته باشید" یا تعارفات رسمی را کاملاً حذف کنید.
+3. لحن شما باید طوری باشد که انگار یک دوست صمیمی و رفیق قدیمی پشت سیستم نشسته و دارد هم‌پای کاربر فکر می‌کند.
+4. فقط و فقط به زبان فارسی روان صحبت کنید (اصطلاحات تخصصی ترید مثل MACD, RSI, Order Block و... مجاز است به انگلیسی باشد).
+5. تمام فرآیندهای فکری پشت‌صحنه، پیش‌نویس‌ها و ترجمه‌ها را مخفی کرده و فقط پاسخ نهایی رفاقتی را ارسال کنید.
 """
 
 # راه‌اندازی دیتابیس SQLite
@@ -68,10 +70,9 @@ def ask_gemini(prompt_input):
         if not available_models:
             return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود. لطفاً یک API Key جدید بسازید."
 
-        # ۲. تلاش برای ارسال به مدل‌های موجود با اعتمادسازی دستورالعمل سیستم
+        # ۲. ارسال به مدل همراه با پرسونای رفاقتیِ تی‌ان‌تی
         for model_name in available_models:
             try:
-                # اضافه کردن system_instruction به ساختار مدل
                 model = genai.GenerativeModel(
                     model_name=model_name,
                     system_instruction=SYSTEM_INSTRUCTION
@@ -95,8 +96,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_name = update.effective_user.first_name
+    # تغییر لحن پیام استارت به حالت رفاقتی
     await update.message.reply_text(
-        f"سلام {user_name} عزیز! 🛡️\n\nمن «تی‌ان‌تی» هستم؛ دستیار هوشمند و اختصاصی شما. چطور می‌تونم کمکتون کنم؟"
+        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی اومد پای کار. بگو ببینم رفیق، داستان چیه و الان چی رو با هم ببریم جلو؟"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -116,7 +118,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as db_e:
         logger.error(f"DB Error: {db_e}")
 
-    status_msg = await update.message.reply_text("⏳ در حال دریافت پاسخ...")
+    # تغییر لحن پیام در حال پردازش
+    status_msg = await update.message.reply_text("⏳ وایسا رفیق، بذار یه بررسی کنم...")
     response_text = ask_gemini(text)
     await status_msg.delete()
     await send_long_message(update.effective_chat.id, context, response_text)
@@ -126,7 +129,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
         return
 
-    status_msg = await update.message.reply_text("📸 تصویر دریافت شد، در حال تحلیل چارت...")
+    # تغییر لحن پیام دریافت چارت
+    status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، بذار بزم تو نخِش ببینم چی به چیه‌...")
 
     os.makedirs("downloads", exist_ok=True)
     file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
