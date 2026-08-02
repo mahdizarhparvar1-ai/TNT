@@ -36,26 +36,38 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-def generate_ai_response(content_input):
-    """تست هوشمند مدل‌های استاندارد به ترتیب نسخه‌های دقیق"""
-    # لیست دقیق اسامی مدل‌های نسخه v1beta و پایدار
-    candidate_names = [
-        'gemini-1.5-flash-002',
-        'gemini-1.5-pro-002',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro'
-    ]
-    
-    for model_name in candidate_names:
-        try:
-            m = genai.GenerativeModel(model_name)
-            res = m.generate_content(content_input)
-            return res.text
-        except Exception as e:
-            logger.warning(f"Model {model_name} failed: {e}")
-            continue
-            
-    raise Exception("هیچ‌کدام از مدل‌های جمینای در حال حاضر پاسخگو نیستند.")
+def ask_gemini(prompt_input):
+    """دریافت خودکار مدل‌های فعال اکانت شما و پاسخ‌دهی بدون ارور ۴۰۴"""
+    if not GEMINI_API_KEY:
+        return "کلید API جمینای (GEMINI_API_KEY) ست نشده است."
+
+    # پیدا کردن مدل‌های فعال روی API Key شما
+    try:
+        active_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                active_models.append(m.name)
+        
+        logger.info(f"Active models on your key: {active_models}")
+
+        if not active_models:
+            return "هیچ مدلی برای این API Key فعال نیست. لطفا کلید جدید از Google AI Studio بگیرید."
+
+        # امتحان کردن مدل‌های پیدا شده یکی پس از دیگری
+        for model_name in active_models:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt_input)
+                return response.text
+            except Exception as inner_e:
+                logger.warning(f"Failed with {model_name}: {inner_e}")
+                continue
+
+        return "خطا: هیچ‌کدام از مدل‌های موجود روی اکانت شما پاسخ ندادند."
+
+    except Exception as e:
+        logger.error(f"Error fetching models: {e}")
+        return f"خطا در ارتباط با API گوگل: {e}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -81,14 +93,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
 
-    if GEMINI_API_KEY:
-        try:
-            response_text = generate_ai_response(text)
-            await update.message.reply_text(response_text)
-        except Exception as e:
-            await update.message.reply_text(f"خطا در ارتباط با هوش مصنوعی: {e}")
-    else:
-        await update.message.reply_text("کلید API جمینای (GEMINI_API_KEY) در متغیرهای محیطی تنظیم نشده است.")
+    response_text = ask_gemini(text)
+    await update.message.reply_text(response_text)
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -101,16 +107,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo_file = await update.message.photo[-1].get_file()
     await photo_file.download_to_drive(file_path)
 
-    if GEMINI_API_KEY:
-        try:
-            from PIL import Image
-            img = Image.open(file_path)
-            response_text = generate_ai_response(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
-            await update.message.reply_text(response_text)
-        except Exception as e:
-            await update.message.reply_text(f"خطا در پردازش تصویر: {e}")
-    else:
-        await update.message.reply_text("تصویر ذخیره شد اما کلید جمینای ست نشده است.")
+    try:
+        from PIL import Image
+        img = Image.open(file_path)
+        response_text = ask_gemini(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
+        await update.message.reply_text(response_text)
+    except Exception as e:
+        await update.message.reply_text(f"خطا در باز کردن تصویر: {e}")
 
 def main():
     if not TOKEN:
@@ -122,7 +125,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Gemini AI is starting...")
+    print("TNT Bot with Dynamic Gemini AI is starting...")
     application.run_polling()
 
 if __name__ == '__main__':
