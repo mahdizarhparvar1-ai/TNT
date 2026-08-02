@@ -11,7 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # توکن ربات شما که از BotFather گرفتیم
-TOKEN = "8568905045:AAE5DiiyL6nLF6tFiklaDItUuE-P03L7mw"
+TOKEN = "8568905045:AAE5DiiygL6nLF6tFiklaUItUuE-P03L7mw"
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(
