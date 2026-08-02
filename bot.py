@@ -35,16 +35,13 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # پیکربندی جمینای
 if GEMINI_API_KEY:
-    if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # بهترین مدل‌های پیشنهادی برای تحلیل متن و چارت/عکس:
     try:
         model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    except:
+    except Exception as e:
+        logger.error(f"Error loading gemini-1.5-flash-latest: {e}")
         model = genai.GenerativeModel('gemini-pro')
 else:
-    model = None
-
     model = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,7 +93,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             from PIL import Image
             img = Image.open(file_path)
-            response = model.generate_content(["این تصویر را تحلیل کن:", img])
+            response = model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
             await update.message.reply_text(response.text)
         except Exception as e:
             await update.message.reply_text(f"خطا در پردازش تصویر: {e}")
