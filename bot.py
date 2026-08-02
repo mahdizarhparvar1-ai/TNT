@@ -40,7 +40,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     await update.message.reply_text(
-        f"سلام {user_name} عزیز! 🛡️\n\nمن «تی ان تی» هستم؛ همیار امن، خودمختار و هوشمند شما.\nارتباط برقرار شد و ماژول حافظه دائم (دیتابیس) هم فعال شد.\nحالا می‌تونی یادداشت‌هات رو بفرستی تا توی دیتابیس ذخیره‌شون کنم!"
+        f"سلام {user_name} عزیز! 🛡️\n\nمن «تی ان تی» هستم؛ همیار امن، خودمختار و هوشمند شما.\nماژول‌های حافظه دائم و دریافت تصویر فعال شدند.\nمی‌تونی یادداشت‌هات یا اسکرین‌شات چارت‌هات رو بفرستی!"
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -59,7 +59,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
 
-    await update.message.reply_text(f"📝 پیام دریافت شد و در حافظه دائم (دیتابیس) ذخیره شد:\n\n\"{text}\"")
+    await update.message.reply_text(f"📝 پیام دریافت شد و در حافظه دائم ذخیره شد:\n\n\"{text}\"")
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    # لایه امنیتی برای عکس‌ها
+    if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
+        return
+
+    # دریافت بالاترین کیفیت عکس ارسالی
+    photo_file = await update.message.photo[-1].get_file()
+    
+    # اطمینان از وجود پوشه downloads
+    os.makedirs("downloads", exist_ok=True)
+    file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
+    
+    # دانلود و ذخیره عکس
+    await photo_file.download_to_drive(file_path)
+
+    await update.message.reply_text("📊 اسکرین‌شات چارت دریافت و ذخیره شد! آماده برای پردازش و تحلیل.")
 
 def main():
     if not TOKEN:
@@ -70,8 +89,9 @@ def main():
     # ثبت هندلرها
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Database is starting...")
+    print("TNT Bot with Vision & Database is starting...")
     application.run_polling()
 
 if __name__ == '__main__':
