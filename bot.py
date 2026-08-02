@@ -36,11 +36,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # پیکربندی جمینای
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    try:
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
-    except Exception as e:
-        logger.error(f"Error loading gemini-1.5-flash-latest: {e}")
-        model = genai.GenerativeModel('gemini-pro')
+    # استفاده از عبارت رسمی و استاندارد همراه با پیشوند models/
+    model = genai.GenerativeModel('models/gemini-1.5-flash')
 else:
     model = None
 
@@ -74,7 +71,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = model.generate_content(text)
             await update.message.reply_text(response.text)
         except Exception as e:
-            await update.message.reply_text(f"خطا در ارتباط با هوش مصنوعی: {e}")
+            try:
+                alt_model = genai.GenerativeModel('gemini-2.5-flash')
+                response = alt_model.generate_content(text)
+                await update.message.reply_text(response.text)
+            except Exception as e2:
+                await update.message.reply_text(f"خطا در ارتباط با هوش مصنوعی: {e2}")
     else:
         await update.message.reply_text("کلید API جمینای (GEMINI_API_KEY) در متغیرهای محیطی تنظیم نشده است.")
 
@@ -96,7 +98,15 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response = model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
             await update.message.reply_text(response.text)
         except Exception as e:
-            await update.message.reply_text(f"خطا در پردازش تصویر: {e}")
+            # پشتیبان خودکار در صورت نپذیرفتن مدل اول
+            try:
+                from PIL import Image
+                img = Image.open(file_path)
+                fallback_model = genai.GenerativeModel('gemini-2.5-flash')
+                response = fallback_model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
+                await update.message.reply_text(response.text)
+            except Exception as e2:
+                await update.message.reply_text(f"خطا در پردازش تصویر: {e2}")
     else:
         await update.message.reply_text("تصویر ذخیره شد اما کلید جمینای ست نشده است.")
 
