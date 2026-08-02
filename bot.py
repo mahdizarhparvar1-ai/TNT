@@ -37,7 +37,7 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 async def send_long_message(chat_id, context, text):
-    """تقسیم متن‌های طولانی به پیام‌های زیر ۴۰۰۰ کاراکتر برای جلوگیری از ارور Message is too long"""
+    """تقسیم متن‌های طولانی به پیام‌های زیر ۴۰۰۰ کاراکتر"""
     max_length = 3900
     for i in range(0, len(text), max_length):
         await context.bot.send_message(chat_id=chat_id, text=text[i:i+max_length])
@@ -46,25 +46,34 @@ def ask_gemini(prompt_input):
     if not GEMINI_API_KEY:
         return "❌ کلید GEMINI_API_KEY ست نشده است."
 
-    # اسامی مدل‌های جدید و فعال گوگل
-    models_to_try = [
-        'gemini-2.0-flash',
-        'gemini-2.5-flash',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-pro-latest'
-    ]
+    try:
+        # ۱. استعلام مستقیم مدل‌های فعال API Key شما از گوگل
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+        
+        logger.info(f"Available models for key: {available_models}")
 
-    for model_name in models_to_try:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt_input)
-            if response and response.text:
-                return response.text
-        except Exception as e:
-            logger.warning(f"Model {model_name} failed: {e}")
-            continue
+        if not available_models:
+            return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود. لطفاً یک API Key جدید بسازید."
 
-    return "❌ خطا: هیچ‌کدام از مدل‌های جمینای پاسخ ندادند."
+        # ۲. تلاش برای ارسال به مدل‌های موجود به ترتیب دریافت
+        for model_name in available_models:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt_input)
+                if response and response.text:
+                    return response.text
+            except Exception as e:
+                logger.warning(f"Failed with model {model_name}: {e}")
+                continue
+
+        return "❌ هیچ‌کدام از مدل‌های فعال پاسخگو نبودند."
+
+    except Exception as e:
+        logger.error(f"Error fetching models: {e}")
+        return f"❌ خطای ارتباط با API گوگل: {e}"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -114,7 +123,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         from PIL import Image
         img = Image.open(file_path)
-        response_text = ask_gemini(["این تصویر/چارت را کامل، دقیق و خلاصه تحلیل کن:", img])
+        response_text = ask_gemini(["این تصویر/چارت را کامل، دقیق و هوشمندانه تحلیل کن:", img])
         await status_msg.delete()
         await send_long_message(update.effective_chat.id, context, response_text)
     except Exception as e:
