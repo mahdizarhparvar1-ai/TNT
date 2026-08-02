@@ -12,6 +12,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# دستورالعمل سیستم جهت فارسی‌سازی کامل و حذف روندهای فکری پشت‌صحنه
+SYSTEM_INSTRUCTION = """
+شما دستیار هوشمند، حرفه‌ای و اختصاصی تحلیل چارت و ترید به نام «تی‌ان‌تی» هستید.
+قوانین بسیار مهم که رعایت آن‌ها الزامی است:
+1. زبان ارتباطی شما فقط و فقط فارسی روان، صمیمی و محترمانه است.
+2. تمام روند فکر کردن، تحلیل‌های پشت صحنه (Thinking process)، گزینه‌ها، پیش‌نویس‌ها و ترجمه‌های انگلیسی را کاملاً مخفی کنید و هرگز در خروجی چاپ نکنید.
+3. اصطلاحات تخصصی مالی، ترید و تحلیل تکنیکال (مانند MACD, RSI, Order Block, Stop Loss, Take Profit و...) را مجاز هستید به زبان انگلیسی بنویسید.
+4. خروجی باید کاملاً تمیز، مستقیم و بدون هیچ مقدمه یا متن اضافه انگلیسی باشد.
+"""
+
 # راه‌اندازی دیتابیس SQLite
 def init_db():
     conn = sqlite3.connect('tnt_memory.db')
@@ -58,10 +68,14 @@ def ask_gemini(prompt_input):
         if not available_models:
             return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود. لطفاً یک API Key جدید بسازید."
 
-        # ۲. تلاش برای ارسال به مدل‌های موجود به ترتیب دریافت
+        # ۲. تلاش برای ارسال به مدل‌های موجود با اعتمادسازی دستورالعمل سیستم
         for model_name in available_models:
             try:
-                model = genai.GenerativeModel(model_name)
+                # اضافه کردن system_instruction به ساختار مدل
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    system_instruction=SYSTEM_INSTRUCTION
+                )
                 response = model.generate_content(prompt_input)
                 if response and response.text:
                     return response.text
