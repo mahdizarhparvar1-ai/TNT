@@ -35,7 +35,7 @@ SYSTEM_INSTRUCTION = """
    - استفاده از زبان انگلیسی **فقط و فقط** برای اصطلاحات تخصصی فنی (مثل نام کتابخانه‌ها یا تکه کدهای برنامه‌نویسی) مجاز است. به هیچ وجه حق ندارید جملات، پاراگراف‌ها یا توضیحات را به انگلیسی بنویسید. این جزو هویت اصلی شماست.
 
 6. قوانین فنی خروجی:
-   - تمام فرآیندهای فکری پشت‌صحنه را مخفی نگه دارید و فقط پاسخ نهایی و یکدست را ارسال کنید.
+   - تمام فرآیندهای فکری پشت‌صحنه (Chain of Thought) را کاملاً مخفی نگه دارید و به هیچ وجه در متن خروجی چاپ نکنید. فقط و فقط پاسخ نهایی و یکدست را ارسال کنید.
 """
 
 # راه‌اندازی دیتابیس جامع
@@ -153,13 +153,23 @@ def ask_gemini(prompt_input, history_context):
         return "❌ کلید GEMINI_API_KEY ست نشده است."
 
     try:
-        full_prompt = f"""
+        # مدیریت هوشمند ورودی (تشخیص حالت متنی ساده یا ترکیبی متن و عکس)
+        if isinstance(prompt_input, list):
+            user_text = prompt_input[0]
+            content_to_send = [
+                f"[حافظه ماندگار ما و ایده‌ها]:\n{history_context}",
+                user_text,
+                prompt_input[1]
+            ]
+        else:
+            full_prompt = f"""
 [حافظه ماندگار، دغدغه‌ها، تسک‌ها و ایده‌های تکامل تی‌ان‌تی]:
 {history_context}
 
 [درخواست جدید کاربر]:
 {prompt_input}
 """
+            content_to_send = full_prompt
 
         available_models = []
         for m in genai.list_models():
@@ -175,7 +185,7 @@ def ask_gemini(prompt_input, history_context):
                     model_name=model_name,
                     system_instruction=SYSTEM_INSTRUCTION
                 )
-                response = model.generate_content(full_prompt)
+                response = model.generate_content(content_to_send)
                 if response and response.text:
                     return response.text.strip()
             except Exception as e:
