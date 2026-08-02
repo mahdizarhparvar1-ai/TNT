@@ -150,14 +150,6 @@ def ask_gemini(prompt_input, history_context):
         return "❌ کلید GEMINI_API_KEY ست نشده است."
 
     try:
-        available_models = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name)
-
-        if not available_models:
-            return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود."
-
         full_prompt = f"""
 [حافظه ماندگار، دغدغه‌ها، تسک‌ها و ایده‌های تکامل تی‌ان‌تی]:
 {history_context}
@@ -165,6 +157,15 @@ def ask_gemini(prompt_input, history_context):
 [درخواست جدید کاربر]:
 {prompt_input}
 """
+
+        # حلقه روی مدل‌ها با دریافت پاسخ تمیز و نهایی (بدون نمایش فرآیند فکر واسط)
+        available_models = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+
+        if not available_models:
+            return "❌ هیچ مدلی روی این API Key پشتیبانی نمی‌شود."
 
         for model_name in available_models:
             try:
@@ -174,7 +175,7 @@ def ask_gemini(prompt_input, history_context):
                 )
                 response = model.generate_content(full_prompt)
                 if response and response.text:
-                    return response.text
+                    return response.text.strip()
             except Exception as e:
                 logger.warning(f"Failed with model {model_name}: {e}")
                 continue
@@ -250,7 +251,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await voice_file.download_to_drive(file_path)
 
     try:
-        # آپلود فایل صوتی به جمینای برای تحلیل مستقیم ویس
         audio_file_ref = genai.upload_file(file_path)
         
         history_context = get_recent_memories(user_id)
@@ -263,7 +263,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 این فایل صوتی ارسال شده از طرف کاربر را گوش کن و با لحن رفاقتیِ تی‌ان‌تی به دغدغه یا صحبت او پاسخ بده:
 """
         
-        # ارسال فایل صوتی و پرامپت به جمینای
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         response_text = "❌ خطا در پردازش صوت."
         
@@ -272,7 +271,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 model = genai.GenerativeModel(model_name=model_name, system_instruction=SYSTEM_INSTRUCTION)
                 response = model.generate_content([audio_file_ref, prompt])
                 if response and response.text:
-                    response_text = response.text
+                    response_text = response.text.strip()
                     break
             except Exception as e:
                 logger.warning(f"Voice model error {model_name}: {e}")
