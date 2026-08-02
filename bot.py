@@ -11,8 +11,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # توکن ربات شما که از BotFather گرفتیم
-TOKEN = os.getenv("TELEGRAM_TOKEN", "8615862462:AAHwmacMNaupYxDnU16JSJv71aC4nKZoC7Y")
-
+TOKEN = "8568905045:AAE5DiiyL6nLF6tFiklaDItUuE-P03L7mw"
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     await update.message.reply_text(
