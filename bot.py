@@ -9,8 +9,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# توکن ربات از BotFather
-TOKEN = "8568905045:AAE5DiiyL6nLF6tFiklaDlTUUe-P03L7mw"
+# توکن جدید ربات از BotFather
+TOKEN = "8568905045:AAHFA2sn_yBre3V42RCxSu_MWIf2F5SAWzg"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
