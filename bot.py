@@ -35,9 +35,16 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 # پیکربندی جمینای
 if GEMINI_API_KEY:
+    if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # بهترین مدل‌های پیشنهادی برای تحلیل متن و چارت/عکس:
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    except:
+        model = genai.GenerativeModel('gemini-pro')
 else:
+    model = None
+
     model = None
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
