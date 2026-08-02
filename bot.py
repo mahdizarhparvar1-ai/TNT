@@ -33,19 +33,29 @@ TOKEN = os.getenv("BOT_TOKEN")
 ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID", "0"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# پیکربندی جمینای با مدل‌های رسمی و کاملاً پایدار
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-def get_working_model():
-    # لیست مدلهای مطمئن و اصلی به ترتیب اولویت
-    models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
-    for m in models_to_try:
+def generate_ai_response(content_input):
+    """تست هوشمند مدل‌های استاندارد به ترتیب نسخه‌های دقیق"""
+    # لیست دقیق اسامی مدل‌های نسخه v1beta و پایدار
+    candidate_names = [
+        'gemini-1.5-flash-002',
+        'gemini-1.5-pro-002',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
+    ]
+    
+    for model_name in candidate_names:
         try:
-            return genai.GenerativeModel(m)
-        except Exception:
+            m = genai.GenerativeModel(model_name)
+            res = m.generate_content(content_input)
+            return res.text
+        except Exception as e:
+            logger.warning(f"Model {model_name} failed: {e}")
             continue
-    return genai.GenerativeModel('gemini-1.5-flash')
+            
+    raise Exception("هیچ‌کدام از مدل‌های جمینای در حال حاضر پاسخگو نیستند.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -73,9 +83,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if GEMINI_API_KEY:
         try:
-            model = get_working_model()
-            response = model.generate_content(text)
-            await update.message.reply_text(response.text)
+            response_text = generate_ai_response(text)
+            await update.message.reply_text(response_text)
         except Exception as e:
             await update.message.reply_text(f"خطا در ارتباط با هوش مصنوعی: {e}")
     else:
@@ -96,9 +105,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             from PIL import Image
             img = Image.open(file_path)
-            model = get_working_model()
-            response = model.generate_content(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
-            await update.message.reply_text(response.text)
+            response_text = generate_ai_response(["این تصویر/چارت را کامل و هوشمندانه تحلیل کن:", img])
+            await update.message.reply_text(response_text)
         except Exception as e:
             await update.message.reply_text(f"خطا در پردازش تصویر: {e}")
     else:
