@@ -141,7 +141,7 @@ def save_smart_memory(user_id, text):
     except Exception as db_e:
         logger.error(f"DB Error: {db_e}")
 
-def ask_gemini(prompt_input, history_context):
+async def ask_gemini(prompt_input, history_context):
     if not GEMINI_API_KEY:
         return "❌ کلید GEMINI_API_KEY ست نشده است."
 
@@ -161,16 +161,13 @@ def ask_gemini(prompt_input, history_context):
 {prompt_input}
 """
 
-        # انتخاب پویای مدل برای جلوگیری از خطای نسخه
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        target_model = next((m for m in available_models if 'flash' in m), available_models[0] if available_models else 'gemini-1.5-flash')
-
         model = genai.GenerativeModel(
-            model_name=target_model,
+            model_name="gemini-1.5-flash",
             system_instruction=SYSTEM_INSTRUCTION
         )
         
-        response = model.generate_content(content_to_send)
+        # استفاده از متد آسنکرون برای جلوگیری از فریز شدن ربات
+        response = await model.generate_content_async(content_to_send)
         
         if response and response.text:
             raw_text = response.text.strip()
@@ -227,7 +224,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     enriched_prompt = f"[زمان فعلی سیستم: {current_time}]\n{text}"
 
     status_msg = await update.message.reply_text("⏳ وایسا رفیق، بذار ببرمش زیر ذره‌بین...")
-    response_text = ask_gemini(enriched_prompt, history_context)
+    response_text = await ask_gemini(enriched_prompt, history_context)
     await status_msg.delete()
     await send_long_message(update.effective_chat.id, context, response_text)
 
@@ -249,7 +246,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         history_context = get_recent_memories(user_id)
         
         prompt = f"این ویس کاربر است. با توجه به حافظه قبلی، پاسخ رفاقتی بده:\n{history_context}"
-        response_text = ask_gemini([prompt, audio_file_ref], history_context)
+        response_text = await ask_gemini([prompt, audio_file_ref], history_context)
 
         await status_msg.delete()
         save_smart_memory(user_id, "[ویس کاربر پردازش شد]")
@@ -284,7 +281,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             img
         ]
         
-        response_text = ask_gemini(enriched_prompt, history_context)
+        response_text = await ask_gemini(enriched_prompt, history_context)
         await status_msg.delete()
         
         save_smart_memory(user_id, "تحلیل پیشرفته چارت انجام شد.")
@@ -308,7 +305,7 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Iron Filter (Optimized) is running...")
+    print("TNT Bot (Async Optimized) is running...")
     application.run_polling()
 
 if __name__ == '__main__':
