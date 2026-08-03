@@ -180,24 +180,23 @@ def ask_gemini(prompt_input, history_context):
                 if response and response.text:
                     raw_text = response.text.strip()
                     
-                    # فیلتر ضد تکرار و حذف بلوک‌های دوگانه
-                    paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
-                    unique_paragraphs = []
-                    
-                    for p in paragraphs:
-                        # اگر پاراگراف تکراری نبود یا شباهت بالایی با قبلی نداشت اضافه کن
-                        if p not in unique_paragraphs:
-                            unique_paragraphs.append(p)
+                    # --- فیلتر جراحی فول‌پروتکل برای حذف بخش Thinking، Draft و کدهای اضافی ---
+                    final_text = ""
+                    if "Draft:" in raw_text or "*Draft:*" in raw_text:
+                        parts = raw_text.split("Draft:") if "Draft:" in raw_text else raw_text.split("*Draft:*")
+                        final_text = parts[-1].replace("*", "").strip()
+                    else:
+                        paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
+                        for p in reversed(paragraphs):
+                            if not any(char in p for char in "ابپتثجحخدذرزژسشصضطظعغفقکگلمنوهی"):
+                                continue
+                            final_text = p
+                            break
+                        if not final_text:
+                            final_text = paragraphs[-1] if paragraphs else raw_text
                             
-                    final_text = "\n\n".join(unique_paragraphs).strip()
-                    
-                    # اگر کلاً متن توی یک پاراگرافِ طولانی تکرار شده بود، نیمه اول و دوم را چک می‌کنیم
-                    half_len = len(final_text) // 2
-                    if half_len > 20:
-                        first_half = final_text[:half_len].strip()
-                        second_half = final_text[half_len:].strip()
-                        if first_half in second_half or second_half in first_half or first_half == second_half:
-                            final_text = first_half if len(first_half) > len(second_half) else second_half
+                    # پاکسازی نهایی کاراکترهای ستاره‌گذاری اضافی
+                    final_text = final_text.replace("*", "").strip()
                     
                     if final_text:
                         return final_text
