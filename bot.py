@@ -161,12 +161,12 @@ async def ask_gemini(prompt_input, history_context):
 {prompt_input}
 """
 
+        # استفاده مستقیم از مدل پایدار و پرسرعت بدون تأخیر برای جستجوی لیست مدل‌ها
         model = genai.GenerativeModel(
             model_name="gemini-1.5-flash",
             system_instruction=SYSTEM_INSTRUCTION
         )
         
-        # استفاده از متد آسنکرون برای جلوگیری از فریز شدن ربات
         response = await model.generate_content_async(content_to_send)
         
         if response and response.text:
@@ -305,7 +305,7 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot (Async Optimized) is running...")
+    print("TNT Bot (Lightning Fast) is running...")
     application.run_polling()
 
 if __name__ == '__main__':
