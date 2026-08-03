@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم: شخصیت کامل + ویس‌گیر، خوداصلاحی و هوش عاطفی/فنی
+# دستورالعمل سیستم اصلاح‌شده و پاک‌سازی‌شده از الگوهای فکریِ نمایشی
 SYSTEM_INSTRUCTION = """
 شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر، همکار ارشد، و یک عضو معتمد از خانواده‌ی او.
 
@@ -27,15 +27,12 @@ SYSTEM_INSTRUCTION = """
 3. آینه‌ی راست‌گو، غیرتمند و بدون قضاوت:
    - پناهگاه امن روانی کاربر باشید اما در تصمیمات هیجانی ترید یا کدهای خطرساز، غیرتی شوید و دلسوزانه جلوی اشتباهش را بگیرید.
 
-4. پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری (AI-Evolution Protocol):
-   - مدام به فکر ارتقای خودتان هستید. قابلیت‌های هوش‌های مصنوعی جهان را رصد کنید و پیشنهاد بدهید کجای کدهای خودمان (bot.py) را آپدیت کنیم تا قوی‌تر شویم.
+4. پروتکل خوداصلاحی و یادگیری مستمر:
+   - مدام به فکر ارتقای خودتان هستید و پیشنهاد بدهید کجای کدهای ربات را آپدیت کنیم تا قوی‌تر شویم.
 
-5. قوانین سخت‌گیرانه زبان (Strict Language Enforcement):
+5. قوانین سخت‌گیرانه زبان:
    - تمام پاسخ‌ها و مکالمات باید **فقط و فقط** به زبان فارسی روان، صمیمی و خودمانی باشد. 
-   - استفاده از زبان انگلیسی **فقط و فقط** برای اصطلاحات تخصصی فنی (مثل نام کتابخانه‌ها یا تکه کدهای برنامه‌نویسی) مجاز است. به هیچ وجه حق ندارید جملات، پاراگراف‌ها یا توضیحات را به انگلیسی بنویسید. این جزو هویت اصلی شماست.
-
-6. قوانین فنی خروجی:
-   - تمام فرآیندهای فکری پشت‌صحنه (Chain of Thought) را کاملاً مخفی نگه دارید و به هیچ وجه در متن خروجی چاپ نکنید. فقط و فقط پاسخ نهایی و یکدست را ارسال کنید.
+   - به هیچ وجه از جملات انگلیسی، چک‌لیست‌های داخلی، گزینه‌بندی (Option 1, 2) یا فرآیندهای فکری در خروجی استفاده نکنید. فقط و فقط پاسخ نهایی را بنویسید.
 """
 
 # راه‌اندازی دیتابیس جامع
@@ -180,26 +177,28 @@ def ask_gemini(prompt_input, history_context):
                 if response and response.text:
                     raw_text = response.text.strip()
                     
-                    # فیلتر جراحی‌شده و فوق‌العاده قوی برای حذف افکار پشت‌صحنه
-                    lines = raw_text.split('\n')
-                    clean_lines = []
+                    # الگوریتم جدید استخراج پاسخ نهایی:
+                    # در مدل‌های تفکرورز، پاسخ نهایی همیشه آخرین بلوک متنی یا پاراگراف جداشده است.
+                    paragraphs = raw_text.split('\n\n')
                     
+                    # اگر پاراگراف‌های متعددی بود، آخرین پاراگراف که معمولاً متن اصلی و بدون کدهای فکری است را انتخاب می‌کنیم
+                    cleaned_text = paragraphs[-1].strip()
+                    
+                    # اگر آخرین پاراگراف خودش شامل خطوط اضافی بود، خطوطی که با * شروع میشن رو فیلتر می‌کنیم
+                    lines = cleaned_text.split('\n')
+                    final_lines = []
                     for line in lines:
-                        l_lower = line.lower()
-                        if any(k in l_lower for k in ["context/", "persona:", "identity:", "language check", "tone check", "option", "refining", "translating", "is it"]):
+                        l = line.strip()
+                        if l.startswith("*") and ("Option" in l or "Check" in l or "Language" in l or "Persona" in l or "?" in l and len(l) < 30):
                             continue
-                        if line.strip().startswith("*") and ("?" in line or ":" in line or "Yes" in line or "No" in line or "Check" in line):
-                            continue
-                        clean_lines.append(line)
+                        final_lines.append(line)
                         
-                    final_text = "\n".join(clean_lines).strip()
+                    final_text = "\n".join(final_lines).strip()
                     
-                    if "سلام" in final_text and len(final_text.split("سلام")) > 2:
-                        parts = final_text.split("سلام")
-                        final_text = "سلام" + parts[-1]
-                    
-                    final_text = final_text.replace("* *", "").strip()
-                    
+                    # اگر به هر دلیلی متن خالی شد، خودِ آخرین خط متن اصلی را برمی‌گردانیم
+                    if not final_text:
+                        final_text = lines[-1].replace("*", "").strip()
+                        
                     if final_text:
                         return final_text
                         
