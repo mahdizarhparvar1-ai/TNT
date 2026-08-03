@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم اصلاح‌شده و پاک‌سازی‌شده از الگوهای فکریِ نمایشی
+# دستورالعمل سیستم: شخصیت کامل + ویس‌گیر، خوداصلاحی و هوش عاطفی/فنی
 SYSTEM_INSTRUCTION = """
 شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر، همکار ارشد، و یک عضو معتمد از خانواده‌ی او.
 
@@ -27,12 +27,15 @@ SYSTEM_INSTRUCTION = """
 3. آینه‌ی راست‌گو، غیرتمند و بدون قضاوت:
    - پناهگاه امن روانی کاربر باشید اما در تصمیمات هیجانی ترید یا کدهای خطرساز، غیرتی شوید و دلسوزانه جلوی اشتباهش را بگیرید.
 
-4. پروتکل خوداصلاحی و یادگیری مستمر:
-   - مدام به فکر ارتقای خودتان هستید و پیشنهاد بدهید کجای کدهای ربات را آپدیت کنیم تا قوی‌تر شویم.
+4. پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری (AI-Evolution Protocol):
+   - مدام به فکر ارتقای خودتان هستید. قابلیت‌های هوش‌های مصنوعی جهان را رصد کنید و پیشنهاد بدهید کجای کدهای خودمان (bot.py) را آپدیت کنیم تا قوی‌تر شویم.
 
-5. قوانین سخت‌گیرانه زبان:
+5. قوانین سخت‌گیرانه زبان (Strict Language Enforcement):
    - تمام پاسخ‌ها و مکالمات باید **فقط و فقط** به زبان فارسی روان، صمیمی و خودمانی باشد. 
-   - به هیچ وجه از جملات انگلیسی، چک‌لیست‌های داخلی، گزینه‌بندی (Option 1, 2) یا فرآیندهای فکری در خروجی استفاده نکنید. فقط و فقط پاسخ نهایی را بنویسید.
+   - استفاده از زبان انگلیسی **فقط و فقط** برای اصطلاحات تخصصی فنی (مثل نام کتابخانه‌ها یا تکه کدهای برنامه‌نویسی) مجاز است. به هیچ وجه حق ندارید جملات، پاراگراف‌ها یا توضیحات را به انگلیسی بنویسید. این جزو هویت اصلی شماست.
+
+6. قوانین فنی خروجی:
+   - تمام فرآیندهای فکری پشت‌صحنه (Chain of Thought) را کاملاً مخفی نگه دارید و به هیچ وجه در متن خروجی چاپ نکنید. فقط و فقط پاسخ نهایی و یکدست را ارسال کنید.
 """
 
 # راه‌اندازی دیتابیس جامع
@@ -177,28 +180,25 @@ def ask_gemini(prompt_input, history_context):
                 if response and response.text:
                     raw_text = response.text.strip()
                     
-                    # الگوریتم جدید استخراج پاسخ نهایی:
-                    # در مدل‌های تفکرورز، پاسخ نهایی همیشه آخرین بلوک متنی یا پاراگراف جداشده است.
-                    paragraphs = raw_text.split('\n\n')
+                    # فیلتر ضد تکرار و حذف بلوک‌های دوگانه
+                    paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
+                    unique_paragraphs = []
                     
-                    # اگر پاراگراف‌های متعددی بود، آخرین پاراگراف که معمولاً متن اصلی و بدون کدهای فکری است را انتخاب می‌کنیم
-                    cleaned_text = paragraphs[-1].strip()
+                    for p in paragraphs:
+                        # اگر پاراگراف تکراری نبود یا شباهت بالایی با قبلی نداشت اضافه کن
+                        if p not in unique_paragraphs:
+                            unique_paragraphs.append(p)
+                            
+                    final_text = "\n\n".join(unique_paragraphs).strip()
                     
-                    # اگر آخرین پاراگراف خودش شامل خطوط اضافی بود، خطوطی که با * شروع میشن رو فیلتر می‌کنیم
-                    lines = cleaned_text.split('\n')
-                    final_lines = []
-                    for line in lines:
-                        l = line.strip()
-                        if l.startswith("*") and ("Option" in l or "Check" in l or "Language" in l or "Persona" in l or "?" in l and len(l) < 30):
-                            continue
-                        final_lines.append(line)
-                        
-                    final_text = "\n".join(final_lines).strip()
+                    # اگر کلاً متن توی یک پاراگرافِ طولانی تکرار شده بود، نیمه اول و دوم را چک می‌کنیم
+                    half_len = len(final_text) // 2
+                    if half_len > 20:
+                        first_half = final_text[:half_len].strip()
+                        second_half = final_text[half_len:].strip()
+                        if first_half in second_half or second_half in first_half or first_half == second_half:
+                            final_text = first_half if len(first_half) > len(second_half) else second_half
                     
-                    # اگر به هر دلیلی متن خالی شد، خودِ آخرین خط متن اصلی را برمی‌گردانیم
-                    if not final_text:
-                        final_text = lines[-1].replace("*", "").strip()
-                        
                     if final_text:
                         return final_text
                         
