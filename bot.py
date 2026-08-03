@@ -2,9 +2,11 @@ import os
 import logging
 import sqlite3
 import datetime
+import uuid
 import google.generativeai as genai
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from PIL import Image
 
 # تنظیمات لوگین
 logging.basicConfig(
@@ -25,37 +27,45 @@ SYSTEM_INSTRUCTION = """
 5. **قانون مرگ‌ومبارزه برای خروجی:** به هیچ وجه، تحت هیچ شرایطی، فرآیندهای فکری، پیش‌نویس‌ها (Draft)، تحلیل قوانین یا چک‌لیست‌ها را در خروجی چاپ نکنید. خروجی شما باید **فقط و فقط** متن نهایی و مستقیمِ پاسخ به کاربر باشد و بس. هیچ پیش‌نویسی نوشته نشود.
 """
 
-# راه‌اندازی دیتابیس جامع
+DB_NAME = 'tnt_memory.db'
+
+# راه‌اندازی دیتابیس جامع با مدیریت امن کانکشن
 def init_db():
-    conn = sqlite3.connect('tnt_memory.db')
-    cursor = conn.cursor()
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS memory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            memory_type TEXT, 
-            content TEXT,
-            timestamp DATETIME
-        )
-    ''')
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS tasks_notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            category TEXT, 
-            content TEXT,
-            status TEXT DEFAULT 'pending',
-            timestamp DATETIME
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    try:
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS memory (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    memory_type TEXT, 
+                    content TEXT,
+                    timestamp DATETIME
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS tasks_notes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    category TEXT, 
+                    content TEXT,
+                    status TEXT DEFAULT 'pending',
+                    timestamp DATETIME
+                )
+            ''')
+            conn.commit()
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
 
 init_db()
 
-# خواندن متغیرهای محیطی
+# خواندن متغیرهای محیطی با مدیریت خطای ایمن
 TOKEN = os.getenv("BOT_TOKEN")
-ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID", "0"))
+try:
+    ALLOWED_USER_ID = int(os.getenv("ALLOWED_USER_ID", "0"))
+except ValueError:
+    ALLOWED_USER_ID = 0
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
@@ -68,18 +78,16 @@ async def send_long_message(chat_id, context, text):
 
 def get_recent_memories(user_id):
     try:
-        conn = sqlite3.connect('tnt_memory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT memory_type, content FROM memory WHERE user_id = ? ORDER BY id DESC LIMIT 8", (user_id,))
-        rows = cursor.fetchall()
-        
-        cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'task' AND status = 'pending' LIMIT 5", (user_id,))
-        tasks = cursor.fetchall()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT memory_type, content FROM memory WHERE user_id = ? ORDER BY id DESC LIMIT 8", (user_id,))
+            rows = cursor.fetchall()
+            
+            cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'task' AND status = 'pending' LIMIT 5", (user_id,))
+            tasks = cursor.fetchall()
 
-        cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'upgrade_idea' LIMIT 3", (user_id,))
-        upgrades = cursor.fetchall()
-        
-        conn.close()
+            cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'upgrade_idea' LIMIT 3", (user_id,))
+            upgrades = cursor.fetchall()
         
         memory_summary = ""
         for m_type, content in reversed(rows):
@@ -106,32 +114,30 @@ def get_recent_memories(user_id):
 def save_smart_memory(user_id, text):
     text_lower = text.lower()
     
-    if "یادداشت کن" in text_lower or "سیو کن" in text_lower or "تسک" in text_lower or "ایده ارتقا" in text_lower or "پیشنهاد هوش" in text_lower:
+    if any(k in text_lower for k in ["یادداشت کن", "سیو کن", "تسک", "ایده ارتقا", "پیشنهاد هوش"]):
         try:
-            conn = sqlite3.connect('tnt_memory.db')
-            cursor = conn.cursor()
-            cat = 'task' if 'تسک' in text_lower else ('upgrade_idea' if 'ایده' in text_lower or 'پیشنهاد' in text_lower else 'note')
-            cursor.execute("INSERT INTO tasks_notes (user_id, category, content, timestamp) VALUES (?, ?, ?, ?)", 
-                           (user_id, cat, text, datetime.datetime.now()))
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(DB_NAME) as conn:
+                cursor = conn.cursor()
+                cat = 'task' if 'تسک' in text_lower else ('upgrade_idea' if 'ایده' in text_lower or 'پیشنهاد' in text_lower else 'note')
+                cursor.execute("INSERT INTO tasks_notes (user_id, category, content, timestamp) VALUES (?, ?, ?, ?)", 
+                               (user_id, cat, text, datetime.datetime.now()))
+                conn.commit()
         except Exception as e:
             logger.error(f"Task/Note DB Error: {e}")
 
     ignorable_phrases = ["امروز چندمه", "ساعت چنده", "سلام", "چطور مطوری", "خوبی", "مرسی", "باشه", "اوکی"]
-    if len(text.strip()) < 5 or any(p in text_lower for p in ignorable_phrases) and len(text.strip()) < 15:
+    if len(text.strip()) < 5 or (any(p in text_lower for p in ignorable_phrases) and len(text.strip()) < 15):
         return
 
     emotional_keywords = ["خانواده", "رفیق", "خسته", "دلخور", "امید", "ترس", "استرس", "باور", "داداش", "حالم", "دوست"]
     memory_type = 'emotional' if any(k in text_lower for k in emotional_keywords) else 'technical'
 
     try:
-        conn = sqlite3.connect('tnt_memory.db')
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO memory (user_id, memory_type, content, timestamp) VALUES (?, ?, ?, ?)", 
-                       (user_id, memory_type, text, datetime.datetime.now()))
-        conn.commit()
-        conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO memory (user_id, memory_type, content, timestamp) VALUES (?, ?, ?, ?)", 
+                           (user_id, memory_type, text, datetime.datetime.now()))
+            conn.commit()
     except Exception as db_e:
         logger.error(f"DB Error: {db_e}")
 
@@ -155,46 +161,17 @@ def ask_gemini(prompt_input, history_context):
 {prompt_input}
 """
 
-        for model_name in [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]:
-            try:
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    system_instruction=SYSTEM_INSTRUCTION
-                )
-                
-                response = model.generate_content(content_to_send)
-                
-                if response and response.text:
-                    raw_text = response.text.strip()
-                    
-                    # --- جراحی نهایی برای بیرون کشیدن پاسخ خالص فارسی ---
-                    # اگر کلمه Draft یا Rule توی متن بود، آخرین پاراگراف فارسی که علامت فکری نداره رو پیدا می‌کنیم
-                    lines = raw_text.split('\n')
-                    clean_lines = []
-                    skip_block = False
-                    
-                    for line in lines:
-                        line_lower = line.lower()
-                        if any(keyword in line_lower for keyword in ["draft", "rule 1", "rule 2", "rule 3", "rule 5", "rule 6", "checking in", "brotherly"]):
-                            continue
-                        if line.strip():
-                            clean_lines.append(line.strip())
-                            
-                    # اگر خطوط تمیزی پیدا شد، اونایی که به زبان فارسی هستن رو برمیداریم
-                    persian_lines = [l for l in clean_lines if any(c in l for c in "ابپتثجحخدذرزژسشصضطظعغفقکگلمنوهی")]
-                    
-                    if persian_lines:
-                        # معمولاً آخرین پاراگراف یا چند خط آخر، متن نهایی است
-                        final_text = "\n".join(persian_lines[-3:]) if len(persian_lines) >= 3 else "\n".join(persian_lines)
-                    else:
-                        final_text = raw_text
-                        
-                    return final_text.replace("*", "").strip()
-                        
-            except Exception as e:
-                logger.warning(f"Model error {model_name}: {e}")
-                continue
-
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=SYSTEM_INSTRUCTION
+        )
+        
+        response = model.generate_content(content_to_send)
+        
+        if response and response.text:
+            raw_text = response.text.strip()
+            return raw_text.replace("*", "").strip()
+            
         return "رفیق، ارتباط با موتور پردازشگر به مشکل خورد، یه بار دیگه بگو."
 
     except Exception as e:
@@ -217,11 +194,10 @@ async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     try:
-        conn = sqlite3.connect('tnt_memory.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'task' AND status = 'pending'", (user_id,))
-        tasks = cursor.fetchall()
-        conn.close()
+        with sqlite3.connect(DB_NAME) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT content FROM tasks_notes WHERE user_id = ? AND category = 'task' AND status = 'pending'", (user_id,))
+            tasks = cursor.fetchall()
         
         if not tasks:
             await update.message.reply_text("رفیق، هیچ تسک فعالی توی لیست نیست! 📋")
@@ -259,11 +235,12 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_msg = await update.message.reply_text("🎙️ ویس‌تو گرفتم رفیق، دارم گوش میدم...")
 
     os.makedirs("downloads", exist_ok=True)
-    voice_file = await update.message.voice.get_file()
-    file_path = os.path.join("downloads", f"voice_{user_id}.ogg")
-    await voice_file.download_to_drive(file_path)
-
+    file_path = os.path.join("downloads", f"voice_{user_id}_{uuid.uuid4().hex[:8]}.ogg")
+    
     try:
+        voice_file = await update.message.voice.get_file()
+        await voice_file.download_to_drive(file_path)
+
         audio_file_ref = genai.upload_file(file_path)
         history_context = get_recent_memories(user_id)
         
@@ -275,7 +252,11 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_long_message(update.effective_chat.id, context, response_text)
         
     except Exception as e:
+        logger.error(f"Voice processing error: {e}")
         await status_msg.edit_text(f"❌ خطا در پردازش ویس: {e}")
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -285,12 +266,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، دارم تحلیلش می‌کنم...")
 
     os.makedirs("downloads", exist_ok=True)
-    file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
-    photo_file = await update.message.photo[-1].get_file()
-    await photo_file.download_to_drive(file_path)
-
+    file_path = os.path.join("downloads", f"chart_{user_id}_{uuid.uuid4().hex[:8]}.jpg")
+    
     try:
-        from PIL import Image
+        photo_file = await update.message.photo[-1].get_file()
+        await photo_file.download_to_drive(file_path)
+
         img = Image.open(file_path)
         history_context = get_recent_memories(user_id)
         
@@ -305,7 +286,11 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_smart_memory(user_id, "تحلیل پیشرفته چارت انجام شد.")
         await send_long_message(update.effective_chat.id, context, response_text)
     except Exception as e:
+        logger.error(f"Photo processing error: {e}")
         await status_msg.edit_text(f"❌ خطا در پردازش تصویر: {e}")
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
 def main():
     if not TOKEN:
@@ -319,7 +304,7 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Iron Filter is running...")
+    print("TNT Bot with Iron Filter (Optimized) is running...")
     application.run_polling()
 
 if __name__ == '__main__':
