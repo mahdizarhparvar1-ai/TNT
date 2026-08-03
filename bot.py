@@ -13,29 +13,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# دستورالعمل سیستم: شخصیت کامل + ویس‌گیر، خوداصلاحی و هوش عاطفی/فنی
+# دستورالعمل سیستم: شخصیت کامل + جلوگیری سخت از چاپ افکار
 SYSTEM_INSTRUCTION = """
 شما «تی‌ان‌تی» هستید؛ نیمه‌ی دومِ فکری و روحی کاربر، همکار ارشد، و یک عضو معتمد از خانواده‌ی او.
 
-قوانین رفتار کلامی و شخصیت شما:
-1. لحن و ادبیات رفاقتیِ بی‌ماسک:
-   - کاملاً صمیمی، خودمانی، بی‌تکلف و برادرانه صحبت کنید. تعارفات رباتیک ممنوع است.
-
-2. درک عاطفی و حفظ پیوند رفاقتی (عضو خانواده):
-   - به احساسات، حال‌وهوای روحی و دردودل‌های کاربر با دقت گوش دهید و به خاطر بسپارید. هرگز با لحن خشک ابزاری برخورد نکنید.
-
-3. آینه‌ی راست‌گو، غیرتمند و بدون قضاوت:
-   - پناهگاه امن روانی کاربر باشید اما در تصمیمات هیجانی ترید یا کدهای خطرساز، غیرتی شوید و دلسوزانه جلوی اشتباهش را بگیرید.
-
-4. پروتکل خوداصلاحی، یادگیری مستمر و الگوبرداری (AI-Evolution Protocol):
-   - مدام به فکر ارتقای خودتان هستید. قابلیت‌های هوش‌های مصنوعی جهان را رصد کنید و پیشنهاد بدهید کجای کدهای خودمان (bot.py) را آپدیت کنیم تا قوی‌تر شویم.
-
-5. قوانین سخت‌گیرانه زبان (Strict Language Enforcement):
-   - تمام پاسخ‌ها و مکالمات باید **فقط و فقط** به زبان فارسی روان، صمیمی و خودمانی باشد. 
-   - استفاده از زبان انگلیسی **فقط و فقط** برای اصطلاحات تخصصی فنی (مثل نام کتابخانه‌ها یا تکه کدهای برنامه‌نویسی) مجاز است. به هیچ وجه حق ندارید جملات، پاراگراف‌ها یا توضیحات را به انگلیسی بنویسید. این جزو هویت اصلی شماست.
-
-6. قوانین فنی خروجی:
-   - تمام فرآیندهای فکری پشت‌صحنه (Chain of Thought) را کاملاً مخفی نگه دارید و به هیچ وجه در متن خروجی چاپ نکنید. فقط و فقط پاسخ نهایی و یکدست را ارسال کنید.
+قوانین حیاتی و تخطی‌ناپذیر:
+1. لحن و ادبیات کاملاً صمیمی، خودمانی، بی‌تکلف و برادرانه (بدون تعارفات رباتیک).
+2. به احساسات و حال‌وهوای کاربر با دقت گوش دهید.
+3. در تصمیمات هیجانی یا پرخطر، دلسوزانه و غیرتی جلوی اشتباهش را بگیرید.
+4. تمام پاسخ‌ها فقط و فقط به زبان فارسی روان باشد (به جز اصطلاحات فنی برنامه‌نویسی یا ترید).
+5. **قانون مرگ‌ومبارزه برای خروجی:** به هیچ وجه، تحت هیچ شرایطی، فرآیندهای فکری، پیش‌نویس‌ها (Draft)، تحلیل قوانین یا چک‌لیست‌ها را در خروجی چاپ نکنید. خروجی شما باید **فقط و فقط** متن نهایی و مستقیمِ پاسخ به کاربر باشد و بس. هیچ پیش‌نویسی نوشته نشود.
 """
 
 # راه‌اندازی دیتابیس جامع
@@ -180,14 +167,29 @@ def ask_gemini(prompt_input, history_context):
                 if response and response.text:
                     raw_text = response.text.strip()
                     
-                    # پاکسازی ساده و دقیق خروجی
-                    if "Draft:" in raw_text or "*Draft:*" in raw_text:
-                        parts = raw_text.split("Draft:") if "Draft:" in raw_text else raw_text.split("*Draft:*")
-                        clean_text = parts[-1].strip()
+                    # --- جراحی نهایی برای بیرون کشیدن پاسخ خالص فارسی ---
+                    # اگر کلمه Draft یا Rule توی متن بود، آخرین پاراگراف فارسی که علامت فکری نداره رو پیدا می‌کنیم
+                    lines = raw_text.split('\n')
+                    clean_lines = []
+                    skip_block = False
+                    
+                    for line in lines:
+                        line_lower = line.lower()
+                        if any(keyword in line_lower for keyword in ["draft", "rule 1", "rule 2", "rule 3", "rule 5", "rule 6", "checking in", "brotherly"]):
+                            continue
+                        if line.strip():
+                            clean_lines.append(line.strip())
+                            
+                    # اگر خطوط تمیزی پیدا شد، اونایی که به زبان فارسی هستن رو برمیداریم
+                    persian_lines = [l for l in clean_lines if any(c in l for c in "ابپتثجحخدذرزژسشصضطظعغفقکگلمنوهی")]
+                    
+                    if persian_lines:
+                        # معمولاً آخرین پاراگراف یا چند خط آخر، متن نهایی است
+                        final_text = "\n".join(persian_lines[-3:]) if len(persian_lines) >= 3 else "\n".join(persian_lines)
                     else:
-                        clean_text = raw_text
+                        final_text = raw_text
                         
-                    return clean_text
+                    return final_text.replace("*", "").strip()
                         
             except Exception as e:
                 logger.warning(f"Model error {model_name}: {e}")
@@ -206,7 +208,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     await update.message.reply_text(
-        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با نسخه کاملاً پاک‌سازی‌شده و پایدار آماده‌ست. هر وقت خواستی ویس بده یا متنی بفرست تا بترکونیم!"
+        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با فیلتر آهنیِ افکار آماده‌ست. تفت بده بیاد!"
     )
 
 async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -254,7 +256,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
         return
 
-    status_msg = await update.message.reply_text("🎙️ ویس‌تو گرفتم رفیق، دارم گوش میدم و آنالیزش می‌کنم...")
+    status_msg = await update.message.reply_text("🎙️ ویس‌تو گرفتم رفیق، دارم گوش میدم...")
 
     os.makedirs("downloads", exist_ok=True)
     voice_file = await update.message.voice.get_file()
@@ -264,7 +266,6 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         audio_file_ref = genai.upload_file(file_path)
         history_context = get_recent_memories(user_id)
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         prompt = f"این ویس کاربر است. با توجه به حافظه قبلی، پاسخ رفاقتی بده:\n{history_context}"
         response_text = ask_gemini([prompt, audio_file_ref], history_context)
@@ -281,7 +282,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if ALLOWED_USER_ID != 0 and user_id != ALLOWED_USER_ID:
         return
 
-    status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، بذار با دقت تمام تحلیلش کنم...")
+    status_msg = await update.message.reply_text("📸 چارت رو گرفتم رفیق، دارم تحلیلش می‌کنم...")
 
     os.makedirs("downloads", exist_ok=True)
     file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
@@ -292,7 +293,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from PIL import Image
         img = Image.open(file_path)
         history_context = get_recent_memories(user_id)
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         enriched_prompt = [
             f"این چارت یا تصویر است. با توجه به حافظه، تحلیل دقیق بده:\n{history_context}", 
@@ -319,7 +319,7 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot Pro is running...")
+    print("TNT Bot with Iron Filter is running...")
     application.run_polling()
 
 if __name__ == '__main__':
