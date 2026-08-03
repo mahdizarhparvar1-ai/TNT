@@ -180,23 +180,26 @@ def ask_gemini(prompt_input, history_context):
                 if response and response.text:
                     raw_text = response.text.strip()
                     
-                    # فیلتر آهنی و قیچی‌کننده‌ی افکار پشت‌صحنه
+                    # فیلتر جراحی‌شده و فوق‌العاده قوی برای حذف افکار پشت‌صحنه
                     lines = raw_text.split('\n')
                     clean_lines = []
                     
                     for line in lines:
-                        line_lower = line.lower()
-                        if any(k in line_lower for k in ["role:", "tone:", "is it", "refining", "translating", "thinking", "* *", "user input:", "context:"]):
+                        l_lower = line.lower()
+                        if any(k in l_lower for k in ["context/", "persona:", "identity:", "language check", "tone check", "option", "refining", "translating", "is it"]):
                             continue
-                        if line.strip().startswith("*") and ("?" in line or "Yes" in line or "No" in line):
+                        if line.strip().startswith("*") and ("?" in line or ":" in line or "Yes" in line or "No" in line or "Check" in line):
                             continue
                         clean_lines.append(line)
-                    
+                        
                     final_text = "\n".join(clean_lines).strip()
                     
-                    if not final_text:
-                        final_text = lines[-1].replace("*", "").strip()
-                        
+                    if "سلام" in final_text and len(final_text.split("سلام")) > 2:
+                        parts = final_text.split("سلام")
+                        final_text = "سلام" + parts[-1]
+                    
+                    final_text = final_text.replace("* *", "").strip()
+                    
                     if final_text:
                         return final_text
                         
