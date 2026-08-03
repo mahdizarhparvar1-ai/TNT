@@ -180,26 +180,14 @@ def ask_gemini(prompt_input, history_context):
                 if response and response.text:
                     raw_text = response.text.strip()
                     
-                    # --- فیلتر جراحی فول‌پروتکل برای حذف بخش Thinking، Draft و کدهای اضافی ---
-                    final_text = ""
+                    # پاکسازی ساده و دقیق خروجی
                     if "Draft:" in raw_text or "*Draft:*" in raw_text:
                         parts = raw_text.split("Draft:") if "Draft:" in raw_text else raw_text.split("*Draft:*")
-                        final_text = parts[-1].replace("*", "").strip()
+                        clean_text = parts[-1].strip()
                     else:
-                        paragraphs = [p.strip() for p in raw_text.split('\n\n') if p.strip()]
-                        for p in reversed(paragraphs):
-                            if not any(char in p for char in "ابپتثجحخدذرزژسشصضطظعغفقکگلمنوهی"):
-                                continue
-                            final_text = p
-                            break
-                        if not final_text:
-                            final_text = paragraphs[-1] if paragraphs else raw_text
-                            
-                    # پاکسازی نهایی کاراکترهای ستاره‌گذاری اضافی
-                    final_text = final_text.replace("*", "").strip()
-                    
-                    if final_text:
-                        return final_text
+                        clean_text = raw_text
+                        
+                    return clean_text
                         
             except Exception as e:
                 logger.warning(f"Model error {model_name}: {e}")
@@ -218,7 +206,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_name = update.effective_user.first_name
     await update.message.reply_text(
-        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با قابلیت ویس‌گیر، حافظه و پروتکل تکامل آماده‌ست. هر وقت خواستی ویس بده یا متنی بفرست تا بترکونیم!"
+        f"سلام {user_name} جان! ⚡\n\nتی‌ان‌تی با نسخه کاملاً پاک‌سازی‌شده و پایدار آماده‌ست. هر وقت خواستی ویس بده یا متنی بفرست تا بترکونیم!"
     )
 
 async def tasks_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -275,30 +263,11 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         audio_file_ref = genai.upload_file(file_path)
-        
         history_context = get_recent_memories(user_id)
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        prompt = f"""
-[حافظه ماندگار ما و ایده‌ها]:
-{history_context}
-[زمان فعلی سیستم: {current_time}]
-این فایل صوتی ارسال شده از طرف کاربر را گوش کن و با لحن رفاقتیِ تی‌ان‌تی به دغدغه یا صحبت او پاسخ بده:
-"""
-        
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        response_text = "❌ خطا در پردازش صوت."
-        
-        for model_name in available_models:
-            try:
-                model = genai.GenerativeModel(model_name=model_name, system_instruction=SYSTEM_INSTRUCTION)
-                response = model.generate_content([audio_file_ref, prompt])
-                if response and response.text:
-                    response_text = response.text.strip()
-                    break
-            except Exception as e:
-                logger.warning(f"Voice model error {model_name}: {e}")
-                continue
+        prompt = f"این ویس کاربر است. با توجه به حافظه قبلی، پاسخ رفاقتی بده:\n{history_context}"
+        response_text = ask_gemini([prompt, audio_file_ref], history_context)
 
         await status_msg.delete()
         save_smart_memory(user_id, "[ویس کاربر پردازش شد]")
@@ -316,19 +285,17 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     os.makedirs("downloads", exist_ok=True)
     file_path = os.path.join("downloads", f"chart_{user_id}.jpg")
-    
     photo_file = await update.message.photo[-1].get_file()
     await photo_file.download_to_drive(file_path)
 
     try:
         from PIL import Image
         img = Image.open(file_path)
-        
         history_context = get_recent_memories(user_id)
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         enriched_prompt = [
-            f"[حافظه ماندگار ما و ایده‌های ارتقا]:\n{history_context}\n[زمان فعلی سیستم: {current_time}]\nاین چارت یا تصویر را از نظر پرایس اکشن، الگوها و نقاط ریسک کامل تحلیل کن:", 
+            f"این چارت یا تصویر است. با توجه به حافظه، تحلیل دقیق بده:\n{history_context}", 
             img
         ]
         
@@ -352,7 +319,7 @@ def main():
     application.add_handler(MessageHandler(filters.VOICE, handle_voice))
     application.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-    print("TNT Bot with Voice-Receiver, Memory & Evolution Protocol is running...")
+    print("TNT Bot Pro is running...")
     application.run_polling()
 
 if __name__ == '__main__':
