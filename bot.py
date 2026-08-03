@@ -161,8 +161,12 @@ def ask_gemini(prompt_input, history_context):
 {prompt_input}
 """
 
+        # انتخاب پویای مدل برای جلوگیری از خطای نسخه
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        target_model = next((m for m in available_models if 'flash' in m), available_models[0] if available_models else 'gemini-1.5-flash')
+
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name=target_model,
             system_instruction=SYSTEM_INSTRUCTION
         )
         
